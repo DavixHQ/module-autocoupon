@@ -1,6 +1,6 @@
 
 type StoreConfig {
     
-    auto_coupon_general_status  : String  @doc(description: "Query by auto_coupon_general_status.") ,
-    auto_coupon_general_message  : String  @doc(description: "Query by auto_coupon_general_message.") ,
+    ioauto_coupon_general_status  : String  @doc(description: "Query by ioauto_coupon_general_status.") ,
+    ioauto_coupon_general_message  : String  @doc(description: "Query by ioauto_coupon_general_message.") ,
 }

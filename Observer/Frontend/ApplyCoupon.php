@@ -1,11 +1,11 @@
 <?php
 /**
- * Prodovo Auto Coupon
- * Copyright (C) 2020  Prodovo
+ * Davix Auto Coupon
+ * Copyright (C) 2020  Davix
  *
- * This file is part of Prodovo/AutoCoupon.
+ * This file is part of Davix/AutoCoupon.
  *
- * Prodovo/AutoCoupon is free software: you can redistribute it and/or modify
+ * Davix/AutoCoupon is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
@@ -19,76 +19,63 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-namespace Prodovo\AutoCoupon\Observer\Frontend;
+declare(strict_types=1);
 
-use Magento\Checkout\Model\Session;
-use Magento\Framework\App\Config\ScopeConfigInterface;
+namespace Davix\AutoCoupon\Observer\Frontend;
+
+use Davix\AutoCoupon\Model\Config;
+use Davix\AutoCoupon\Model\StickyCouponManager;
+use Magento\Checkout\Model\Session as CheckoutSession;
 use Magento\Framework\Event\Observer;
 use Magento\Framework\Event\ObserverInterface;
-use Magento\Framework\App\RequestInterface;
-use Magento\Framework\Exception\LocalizedException;
-use Magento\Framework\Exception\NoSuchEntityException;
-use Magento\Store\Model\ScopeInterface;
+use Magento\Quote\Api\CartRepositoryInterface;
 
 class ApplyCoupon implements ObserverInterface
 {
-
-    const XML_MODULE_STATUS = 'ioauto_coupon/general/status';
-
-    /**
-     * @var ScopeConfigInterface
-     */
-    protected $scopeConfig;
-    /**
-     * @var Session
-     */
-    protected $checkoutSession;
-    /**
-     * @var RequestInterface
-     */
-    protected $request;
-
-    /**
-     * AdminFailed constructor.
-     * @param ScopeConfigInterface $scopeConfig
-     * @param Session $checkoutSession
-     * @param RequestInterface $request
-     */
     public function __construct(
-        ScopeConfigInterface $scopeConfig,
-        Session $checkoutSession,
-        RequestInterface $request
+        private readonly Config $config,
+        private readonly CheckoutSession $checkoutSession,
+        private readonly CartRepositoryInterface $cartRepository,
+        private readonly StickyCouponManager $stickyCouponManager
     ) {
-        $this->scopeConfig = $scopeConfig;
-        $this->checkoutSession = $checkoutSession;
-        $this->request = $request;
     }
 
     /**
-     * @param Observer $observer
-     * @return void
-     * @throws LocalizedException
-     * @throws NoSuchEntityException
-     */
-    public function execute(Observer $observer)
-    {
-        $couponCode = $this->checkoutSession->getQuote()->getCouponCode();
-
-        if (0 > strlen($couponCode)) {
-            $this->checkoutSession->getQuote()->setCouponCode($couponCode)
-                ->collectTotals()
-                ->save();
-        }
-    }
-
-    /**
-     * Module Status
+     * If the cart already has a coupon, re-collect totals so the discount stays applied after
+     * events (adding an item, logging in) that can otherwise leave it uncollected against the
+     * cart's current contents. Otherwise, if this is a logged-in customer with no coupon on
+     * their cart, reapply whichever coupon they last successfully applied.
      *
-     * @return mixed
+     * Relies on module.xml sequencing Davix_AutoCoupon after Magento_Checkout, so on
+     * customer_login this runs after Magento\Checkout\Observer\LoadCustomerQuoteObserver has
+     * already merged the guest cart into the customer's real quote.
      */
-    public function isEnabled()
+    public function execute(Observer $observer): void
     {
-        $storeScope = ScopeInterface::SCOPE_STORE;
-        return $this->scopeConfig->getValue(self::XML_MODULE_STATUS, $storeScope);
+        if (!$this->config->isEnabled()) {
+            return;
+        }
+
+        $quote = $this->checkoutSession->getQuote();
+        $couponCode = (string)$quote->getCouponCode();
+
+        if ($couponCode !== '') {
+            $quote->setCouponCode($couponCode)->collectTotals();
+            $this->cartRepository->save($quote);
+            return;
+        }
+
+        $customerId = $quote->getCustomerId();
+        if (!$customerId) {
+            return;
+        }
+
+        $stickyCouponCode = $this->stickyCouponManager->getCouponCode((int)$customerId);
+        if ($stickyCouponCode === null) {
+            return;
+        }
+
+        $quote->setCouponCode($stickyCouponCode)->collectTotals();
+        $this->cartRepository->save($quote);
     }
 }

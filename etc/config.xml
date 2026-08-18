@@ -1,12 +1,12 @@
 <?xml version="1.0" ?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
 	<default>
-		<auto_coupon>
+		<ioauto_coupon>
 			<general>
-				<status/>
+				<status>0</status>
 				<message>Coupon code has been applied successfully</message>
-				<error_message>An error has occured. Please contact the site administrator for further information.</error_message>
+				<error_message>An error has occurred. Please contact the site administrator for further information.</error_message>
 			</general>
-		</auto_coupon>
+		</ioauto_coupon>
 	</default>
 </config>

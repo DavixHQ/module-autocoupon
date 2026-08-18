@@ -1,11 +1,11 @@
-<?php declare(strict_types=1);
+<?php
 /**
- * A Magento 2 module named Prodovo/AutoCoupon
- * Copyright (C) 2020 Prodovo
+ * A Magento 2 module named Davix/AutoCoupon
+ * Copyright (C) 2020 Davix
  *
- * This file is part of Prodovo/AutoCoupon.
+ * This file is part of Davix/AutoCoupon.
  *
- * Prodovo/AutoCoupon is free software: you can redistribute it and/or modify
+ * Davix/AutoCoupon is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
@@ -19,154 +19,105 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-namespace Prodovo\AutoCoupon\Controller\Index;
+declare(strict_types=1);
 
-use Magento\Framework\App\Config\ScopeConfigInterface;
-use Magento\Framework\App\RequestInterface;
-use Magento\Store\Model\ScopeInterface;
+namespace Davix\AutoCoupon\Controller\Index;
 
-class Index extends \Magento\Framework\App\Action\Action
+use Davix\AutoCoupon\Model\Config;
+use Davix\AutoCoupon\Model\StickyCouponManager;
+use Magento\Checkout\Model\Session as CheckoutSession;
+use Magento\Framework\App\Action\Action;
+use Magento\Framework\App\Action\Context;
+use Magento\Framework\App\Action\HttpGetActionInterface;
+use Magento\Framework\App\ResponseInterface;
+use Magento\Quote\Api\CartRepositoryInterface;
+use Magento\Store\Model\StoreManagerInterface;
+
+class Index extends Action implements HttpGetActionInterface
 {
+    public function __construct(
+        Context $context,
+        private readonly StoreManagerInterface $storeManager,
+        private readonly Config $config,
+        private readonly CheckoutSession $checkoutSession,
+        private readonly CartRepositoryInterface $cartRepository,
+        private readonly StickyCouponManager $stickyCouponManager
+    ) {
+        parent::__construct($context);
+    }
 
-	const XML_MODULE_STATUS = 'ioauto_coupon/general/status';
-	const XML_MODULE_MESSAGE = 'ioauto_coupon/general/message';
-	const XML_MODULE_ERROR_MESSAGE = 'ioauto_coupon/general/error_message';
+    /**
+     * Apply (or clear) a coupon code from the querystring, then redirect.
+     *
+     * @return ResponseInterface|void
+     */
+    public function execute()
+    {
+        if (!$this->config->isEnabled()) {
+            return $this->_redirect('/');
+        }
 
-	/**
-	 * @var ScopeConfigInterface
-	 */
-	protected $scopeConfig;
-	/**
-	 * @var \Magento\Checkout\Model\Session
-	 */
-	protected $checkoutSession;
-	/**
-	 * @var RequestInterface
-	 */
-	protected $request;
+        $couponCode = (string)$this->getRequest()->getParam('code');
+        $redirectUrl = (string)$this->getRequest()->getParam('redirect_url');
 
-	/**
-	 * @var \Magento\Framework\View\Result\PageFactory
-	 */
-	protected $resultPageFactory;
+        $quote = $this->checkoutSession->getQuote();
 
-	/**
-	 * @var \Magento\Store\Model\StoreManagerInterface
-	 */
-	protected $_storeManager;
+        $customerId = $quote->getCustomerId() ? (int)$quote->getCustomerId() : null;
 
-	/**
-	 * @var \Magento\Framework\Message\ManagerInterface
-	 */
-	protected $messageManager;
+        if ($couponCode !== '') {
+            $quote->setCouponCode($couponCode)->collectTotals();
+            $this->cartRepository->save($quote);
 
-	/**
-	 * Constructor
-	 *
-	 * @param \Magento\Framework\App\Action\Context  $context
-	 * @param \Magento\Framework\View\Result\PageFactory $resultPageFactory
-	 */
-	public function __construct(
-		\Magento\Framework\App\Action\Context $context,
-		\Magento\Framework\View\Result\PageFactory $resultPageFactory,
-		\Magento\Store\Model\StoreManagerInterface $storeManager,
-		\Magento\Framework\Message\ManagerInterface $messageManager,
-        ScopeConfigInterface $scopeConfig,
-		\Magento\Checkout\Model\Session $checkoutSession,
-        RequestInterface $request
-	) {
-		$this->resultPageFactory = $resultPageFactory;
-		$this->_storeManager = $storeManager;
-		$this->messageManager = $messageManager;
-		$this->scopeConfig = $scopeConfig;
-		$this->checkoutSession = $checkoutSession;
-		$this->request = $request;
-		parent::__construct($context);
-	}
+            if ($quote->getCouponCode()) {
+                $this->messageManager->addSuccessMessage($this->config->getSuccessMessage());
 
-	/**
-	 * Execute view action
-	 *
-	 * @return \Magento\Framework\Controller\ResultInterface
-	 */
-	public function execute()
-	{
-
-		if ($this->isEnabled()){
-
-			$couponCode = $this->getRequest()->getParam('code');
-
-			$redirectURL = $this->getRequest()->getParam('redirect_url');
-			/* get clean base url */
-			$baseURL = str_replace('http://','', $this->_storeManager->getStore()->getBaseUrl());
-			$baseURL = str_replace('https://','', $this->_storeManager->getStore()->getBaseUrl());
-			$baseURL = str_replace('/','', $baseURL);
-
-			if ($couponCode) {
-
-				$coupon = $this->checkoutSession->getQuote()->setCouponCode($couponCode)
-				                      ->collectTotals()
-				                      ->save();
-				if($coupon->getCouponCode()) {
-					// Successful Application
-					$this->messageManager->addSuccess( $this->getCustomMessage() );
-				}else{
-					// Failed Application
-					$this->messageManager->addErrorMessage( $this->getCustomErrorMessage() );
-				}
-			}else{
-				$this->checkoutSession->getQuote()->setCouponCode('')
-				                      ->collectTotals()
-				                      ->save();
-			}
-
-			if($redirectURL) {
-
-                $parsed = parse_url($redirectURL);
-                if (empty($parsed['scheme'])) {
-                    header("Location: " . "http://" . $redirectURL);
-                }else {
-                    header("Location: " . $redirectURL);
+                if ($customerId !== null) {
+                    $this->stickyCouponManager->save($customerId, $couponCode);
                 }
-                exit();
-			}else{
-                $this->_redirect("/");
+            } else {
+                $this->messageManager->addErrorMessage($this->config->getErrorMessage());
             }
-		}
-		else{
-			$this->_redirect("/");
-		}
-	}
+        } else {
+            $quote->setCouponCode('')->collectTotals();
+            $this->cartRepository->save($quote);
 
-	/**
-	 * Module Status
-	 *
-	 * @return mixed
-	 */
-	public function isEnabled()
-	{
-		$storeScope = ScopeInterface::SCOPE_STORE;
-		return $this->scopeConfig->getValue(self::XML_MODULE_STATUS, $storeScope);
-	}
+            if ($customerId !== null) {
+                $this->stickyCouponManager->remove($customerId);
+            }
+        }
 
-	/**
-	 * Module Config Message
-	 *
-	 * @return mixed
-	 */
-	public function getCustomMessage() {
-		$storeScope = ScopeInterface::SCOPE_STORE;
-		return $this->scopeConfig->getValue(self::XML_MODULE_MESSAGE, $storeScope);
-	}
+        if ($redirectUrl !== '' && $this->isSafeRedirectUrl($redirectUrl)) {
+            return $this->_redirect($redirectUrl);
+        }
 
+        return $this->_redirect('/');
+    }
 
-	/**
-	 * Module Config Error Message
-	 *
-	 * @return mixed
-	 */
-	public function getCustomErrorMessage() {
-		$storeScope = ScopeInterface::SCOPE_STORE;
-		return $this->scopeConfig->getValue(self::XML_MODULE_ERROR_MESSAGE, $storeScope);
-	}
+    /**
+     * Only allow redirecting back to this store's own host. Without this check, `redirect_url`
+     * is an open redirect: a link using this site's real domain could bounce visitors to any
+     * external URL, which is exactly the pattern used in phishing campaigns.
+     */
+    private function isSafeRedirectUrl(string $url): bool
+    {
+        $url = ltrim($url);
+
+        // Some browsers treat a leading "//" or "/\" as protocol-relative, i.e. an external host.
+        if (str_starts_with($url, '//') || str_starts_with($url, '/\\')) {
+            return false;
+        }
+
+        $parsedUrl = parse_url($url);
+        if ($parsedUrl === false) {
+            return false;
+        }
+
+        if (!isset($parsedUrl['host'])) {
+            return true;
+        }
+
+        $storeHost = parse_url((string)$this->storeManager->getStore()->getBaseUrl(), PHP_URL_HOST);
+
+        return $storeHost !== null && strcasecmp($parsedUrl['host'], $storeHost) === 0;
+    }
 }
