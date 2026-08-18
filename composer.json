@@ -1,22 +1,23 @@
 {
-    "name": "prodovo/module-autocoupon",
+    "name": "davix/module-autocoupon",
     "description": "Auto Coupon|Automatically apply coupons to the basket.",
     "type": "magento2-module",
-    "license": "GPL-3.0",
-    "version": "1.0.5",
+    "license": "OSL-3.0",
+    "version": "1.2.0",
     "authors": [
         {
-            "name": "Prodovo",
-            "email": "support@prodovo.co.uk"
+            "name": "Davix",
+            "email": "support@davix.uk"
         }
     ],
     "minimum-stability": "stable",
     "require": {
-        "prodovo/module-base": "*"
+        "php": "~8.1.0||~8.2.0||~8.3.0",
+        "magento/framework": "*"
     },
     "autoload": {
         "psr-4": {
-            "Prodovo\\AutoCoupon\\": ""
+            "Davix\\AutoCoupon\\": ""
         },
         "files": [
             "registration.php"

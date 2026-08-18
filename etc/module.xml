@@ -1,8 +1,10 @@
 <?xml version="1.0" ?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Module/etc/module.xsd">
-	<module name="Prodovo_AutoCoupon" setup_version="1.0.5">
+	<module name="Davix_AutoCoupon" setup_version="1.2.0">
 		<sequence>
 			<module name="Magento_StoreGraphQl"/>
+			<module name="Magento_Customer"/>
+			<module name="Magento_Checkout"/>
 		</sequence>
 	</module>
 </config>

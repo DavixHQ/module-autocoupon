@@ -6,7 +6,7 @@
 				<resource id="Magento_Backend::stores">
 					<resource id="Magento_Backend::stores_settings">
 						<resource id="Magento_Config::config">
-							<resource id="Prodovo_AutoCoupon::config_prodovo_autocoupon" title="auto_coupon"/>
+							<resource id="Davix_AutoCoupon::config_davix_autocoupon" title="auto_coupon"/>
 						</resource>
 					</resource>
 				</resource>

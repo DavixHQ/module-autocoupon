@@ -3,8 +3,8 @@
 	<system>
 		<section id="ioauto_coupon" showInDefault="1" showInStore="1" showInWebsite="1" sortOrder="10" translate="label">
 			<label>AutoCoupon</label>
-			<tab>prodovo</tab>
-			<resource>Prodovo_AutoCoupon::config_prodovo_autocoupon</resource>
+			<tab>sales</tab>
+			<resource>Davix_AutoCoupon::config_davix_autocoupon</resource>
 			<group id="general" showInDefault="1" showInStore="1" showInWebsite="1" sortOrder="10" translate="label">
 				<label>General</label>
 				<field id="status" showInDefault="1" showInStore="1" showInWebsite="1" sortOrder="10" translate="label" type="select">

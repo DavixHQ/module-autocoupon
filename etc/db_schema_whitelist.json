@@ -1,0 +1,13 @@
+{
+    "davix_autocoupon_sticky_coupon": {
+        "column": {
+            "customer_id": true,
+            "coupon_code": true,
+            "updated_at": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "DAVIX_AUTOCOUPON_STICKY_COUPON_CSTR_ID_CSTR_ENTT_ENTT_ID": true
+        }
+    }
+}
