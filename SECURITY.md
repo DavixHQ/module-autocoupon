@@ -16,7 +16,7 @@ We actively provide security updates for the current minor release series and it
 
 If you discover a security vulnerability within this module, please report it responsibly by following these steps:
 
-1. **Email us privately:** Send a detailed report to `support@davix.com` [or use GitHub's private vulnerability reporting feature].
+1. **Email us privately:** Send a detailed report to `support@davix.uk` [or use GitHub's private vulnerability reporting feature].
 2. **Include details:** Provide a clear description of the vulnerability, steps to reproduce it, and any proof-of-concept code if available.
 
 ### What to Expect
